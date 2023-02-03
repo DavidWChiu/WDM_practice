@@ -1,5 +1,8 @@
 #include<wdm.h>
 
+extern "C" DRIVER_INITIALIZE DriverEntry;
+extern "C" DRIVER_UNLOAD DriverUnload;
+
 extern "C"
 NTSTATUS
 DriverEntry(
@@ -10,12 +13,16 @@ DriverEntry(
     UNREFERENCED_PARAMETER(DriverObject);
     UNREFERENCED_PARAMETER(RegistryPath);
 
+    DriverObject->DriverUnload = DriverUnload;
+
     DbgPrint("Hello, Driver/n");
 
     return STATUS_SUCCESS;
 }
 
-void DriverUnload(
+extern "C" 
+void 
+DriverUnload(
     PDRIVER_OBJECT DriverObject
 )
 {
