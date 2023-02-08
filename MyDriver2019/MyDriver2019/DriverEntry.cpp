@@ -8,15 +8,14 @@ void ThreadFunc(PVOID StartContext)
 {
     UNREFERENCED_PARAMETER(StartContext);
     DbgPrint("Hello Kernel Thread!\n");
-    DbgPrint("Kernel Thread is Working!\n");
-    KeWaitForSingleObject(&EventCloseThread, Executive, KernelMode, FALSE, NULL);
-    /*LARGE_INTEGER wait;
-    wait.QuadPart = -10 * 5000000;
+    DbgPrint("Kernel Thread starts working!\n");
+    LARGE_INTEGER wait;
+    wait.QuadPart = -10 * 10000000; // 10 seconds
     while (true) {
         if (KeWaitForSingleObject(&EventCloseThread, Executive, KernelMode, FALSE, &wait) == STATUS_SUCCESS)
             break;
-        DbgPrint("Kernel Thread is Working!\n");
-    }*/
+        DbgPrint("Kernel Thread is working!\n");
+    }
     // DbgBreakPoint();
     DbgPrint("Bye Kerenl Thread!\n");
     PsTerminateSystemThread(STATUS_SUCCESS);
