@@ -1,14 +1,23 @@
 #include<wdm.h>
 
-static HANDLE ThreadHandle;
+PVOID pThreadHandle;
 
-static KEVENT EventDone;
+KEVENT EventCloseThread;
 
 void ThreadFunc(PVOID StartContext) 
 {
     UNREFERENCED_PARAMETER(StartContext);
     DbgPrint("Hello Kernel Thread!\n");
-    KeSetEvent(&EventDone, IO_NO_INCREMENT, FALSE);
+    DbgPrint("Kernel Thread is Working!\n");
+    KeWaitForSingleObject(&EventCloseThread, Executive, KernelMode, FALSE, NULL);
+    /*LARGE_INTEGER wait;
+    wait.QuadPart = -10 * 5000000;
+    while (true) {
+        if (KeWaitForSingleObject(&EventCloseThread, Executive, KernelMode, FALSE, &wait) == STATUS_SUCCESS)
+            break;
+        DbgPrint("Kernel Thread is Working!\n");
+    }*/
+    // DbgBreakPoint();
     DbgPrint("Bye Kerenl Thread!\n");
     PsTerminateSystemThread(STATUS_SUCCESS);
 }
@@ -49,6 +58,7 @@ DriverEntry(
         return status;
 
     DbgPrint("Hi, Device!\n");
+   
 
     //Practice of creating WorkItem
     PIO_WORKITEM workItem = NULL;
@@ -67,13 +77,13 @@ DriverEntry(
     }
 
     // Practice of creating System Thread.
-    KeInitializeEvent(&EventDone, NotificationEvent, FALSE);
-
-    PsCreateSystemThread(&ThreadHandle, GENERIC_ALL, NULL, NULL, NULL, ThreadFunc, NULL);
-
-    KeWaitForSingleObject(&EventDone, Executive, KernelMode, FALSE, NULL);
-
-    ZwClose(&ThreadHandle);
+    KeInitializeEvent(&EventCloseThread, NotificationEvent, FALSE);
+    HANDLE hThreadHandle = NULL;
+    status = PsCreateSystemThread(&hThreadHandle, GENERIC_ALL, NULL, NULL, NULL, ThreadFunc, NULL);
+    if (status == STATUS_SUCCESS) {
+        ObReferenceObjectByHandle(hThreadHandle, GENERIC_ALL, NULL, KernelMode, &pThreadHandle, NULL);
+        ZwClose(hThreadHandle);
+    }
 
     return status;
 }
@@ -84,6 +94,13 @@ DriverUnload(
 )
 {
     UNREFERENCED_PARAMETER(DriverObject);
+    
+    KeSetEvent(&EventCloseThread, IO_NO_INCREMENT, FALSE);
+    if (pThreadHandle != NULL) {
+        KeWaitForSingleObject(pThreadHandle, Executive, KernelMode, FALSE, NULL);
+        ObDereferenceObject(pThreadHandle);
+        DbgPrint("Free Thread Handle!\n");
+    }
 
     if (g_pDeviceObject) {
         IoDeleteDevice(g_pDeviceObject);
